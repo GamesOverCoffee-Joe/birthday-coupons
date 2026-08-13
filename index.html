@@ -2168,7 +2168,7 @@ function showUserPage() {
 
   adminPage.classList.remove("show");
 
-  hideLoading();
+  showLoading();
 
   loadPublicState();
 }
@@ -3299,6 +3299,18 @@ function hideLoading() {
   );
 }
 
+  function showLoading() {
+
+  loading.classList.remove("hidden");
+
+  const text =
+    document.querySelector(".loading-text");
+
+  if (text) {
+    text.textContent =
+      "Getting your birthday coupons ready...";
+  }
+}
 
 function formatDate(value) {
 
