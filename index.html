@@ -1020,14 +1020,22 @@ button {
 .flower-burst {
   position: fixed;
 
-  left: 0;
-  top: 0;
-
   z-index: 400;
 
   pointer-events: none;
+  user-select: none;
 
   font-size: var(--size);
+
+  /*
+   * The flower is placed at its actual starting
+   * position in JavaScript, so Safari never has
+   * to render it from the top-left corner first.
+   */
+  transform:
+    translate(-50%, -50%)
+    scale(0.25)
+    rotate(0deg);
 
   animation:
     flowerBurst 1.35s cubic-bezier(.15,.75,.25,1) forwards;
@@ -1041,10 +1049,7 @@ button {
     opacity: 0;
 
     transform:
-      translate(
-        var(--start-x),
-        var(--start-y)
-      )
+      translate(-50%, -50%)
       scale(0.25)
       rotate(0deg);
   }
@@ -1062,8 +1067,8 @@ button {
 
     transform:
       translate(
-        var(--end-x),
-        var(--end-y)
+        calc(-50% + var(--move-x)),
+        calc(-50% + var(--move-y))
       )
       scale(1.15)
       rotate(var(--rotation));
@@ -2366,32 +2371,35 @@ function playFlowerBurst() {
       100 +
       Math.random() * 260;
 
-    const endX =
-      startX +
+    const moveX =
       Math.cos(angle) * distance;
 
-    const endY =
-      startY +
+    const moveY =
       Math.sin(angle) * distance;
 
+    /*
+     * IMPORTANT:
+     *
+     * Put the flower itself at its starting
+     * position immediately.
+     *
+     * This prevents iOS Safari from briefly
+     * rendering it at (0, 0).
+     */
+    flower.style.left =
+      `${startX}px`;
+
+    flower.style.top =
+      `${startY}px`;
+
     flower.style.setProperty(
-      "--start-x",
-      `${startX}px`
+      "--move-x",
+      `${moveX}px`
     );
 
     flower.style.setProperty(
-      "--start-y",
-      `${startY}px`
-    );
-
-    flower.style.setProperty(
-      "--end-x",
-      `${endX}px`
-    );
-
-    flower.style.setProperty(
-      "--end-y",
-      `${endY}px`
+      "--move-y",
+      `${moveY}px`
     );
 
     flower.style.setProperty(
@@ -2412,18 +2420,18 @@ function playFlowerBurst() {
     );
 
     /*
-     * Clean up each flower after the
-     * animation finishes.
+     * Remove the flower after its animation
+     * has completely finished.
      */
-    setTimeout(
+    flower.addEventListener(
+      "animationend",
       () => {
         flower.remove();
       },
-      1600
+      { once: true }
     );
   }
 }
-
 
 /* =========================================================
    ROUTING
