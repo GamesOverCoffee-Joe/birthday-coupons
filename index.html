@@ -994,6 +994,82 @@ button {
     confettiFall 1.5s cubic-bezier(.12,.7,.35,1) forwards;
 }
 
+  /* =========================================================
+   SECRET FLOWER BURST
+   ========================================================= */
+
+.birthday-badge {
+  cursor: pointer;
+
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.birthday-badge:active {
+  transform: scale(0.94);
+}
+
+.birthday-badge:focus-visible {
+  outline:
+    3px solid rgba(216,111,158,0.35);
+
+  outline-offset: 3px;
+}
+
+.flower-burst {
+  position: fixed;
+
+  left: 0;
+  top: 0;
+
+  z-index: 400;
+
+  pointer-events: none;
+
+  font-size: var(--size);
+
+  animation:
+    flowerBurst 1.35s cubic-bezier(.15,.75,.25,1) forwards;
+
+  will-change: transform, opacity;
+}
+
+@keyframes flowerBurst {
+
+  0% {
+    opacity: 0;
+
+    transform:
+      translate(
+        var(--start-x),
+        var(--start-y)
+      )
+      scale(0.25)
+      rotate(0deg);
+  }
+
+  12% {
+    opacity: 1;
+  }
+
+  72% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+
+    transform:
+      translate(
+        var(--end-x),
+        var(--end-y)
+      )
+      scale(1.15)
+      rotate(var(--rotation));
+  }
+}
+
 /* =========================================================
    ADMIN
    ========================================================= */
@@ -1523,12 +1599,18 @@ button {
 
     <header class="hero">
 
-      <div class="birthday-badge">
+     <div
+      id="birthdayBadge"
+      class="birthday-badge"
+      role="button"
+      tabindex="0"
+      aria-label="A little birthday something"
+      >
         🎂 A little birthday something
       </div>
 
       <h1>
-        Happy Birthday, My Heart! 💕
+        Happy Birthday, Emmer! 💕
       </h1>
 
       <p>
@@ -1636,6 +1718,8 @@ button {
   </div>
 
 </main>
+
+  
 
 
 <!-- =======================================================
@@ -2090,6 +2174,31 @@ document.addEventListener(
 
 function setupEventListeners() {
 
+    const birthdayBadge =
+    document.getElementById("birthdayBadge");
+
+  birthdayBadge.addEventListener(
+    "click",
+    playFlowerBurst
+  );
+
+  birthdayBadge.addEventListener(
+    "keydown",
+    event => {
+
+      if (
+        event.key === "Enter" ||
+        event.key === " "
+      ) {
+
+        event.preventDefault();
+
+        playFlowerBurst();
+      }
+
+    }
+  );
+
   document
     .getElementById("adminLink")
     .addEventListener(
@@ -2185,6 +2294,134 @@ function setupEventListeners() {
     }
   );
 
+}
+
+  /* =========================================================
+   SECRET FLOWER BURST
+   ========================================================= */
+
+function playFlowerBurst() {
+
+  const badge =
+    document.getElementById("birthdayBadge");
+
+  if (!badge) {
+    return;
+  }
+
+  const rect =
+    badge.getBoundingClientRect();
+
+  const flowers = [
+    "🌸",
+    "🌷",
+    "🌺",
+    "🌼",
+    "🌻",
+    "💐",
+    "🌹",
+    "🪻"
+  ];
+
+  /*
+   * Create a burst of flowers starting from
+   * the center of the birthday badge.
+   */
+  for (
+    let i = 0;
+    i < 28;
+    i++
+  ) {
+
+    const flower =
+      document.createElement("div");
+
+    flower.className =
+      "flower-burst";
+
+    flower.textContent =
+      flowers[
+        Math.floor(
+          Math.random() * flowers.length
+        )
+      ];
+
+    const startX =
+      rect.left +
+      rect.width / 2;
+
+    const startY =
+      rect.top +
+      rect.height / 2;
+
+    /*
+     * Spread flowers in all directions.
+     */
+    const angle =
+      Math.random() *
+      Math.PI *
+      2;
+
+    const distance =
+      100 +
+      Math.random() * 260;
+
+    const endX =
+      startX +
+      Math.cos(angle) * distance;
+
+    const endY =
+      startY +
+      Math.sin(angle) * distance;
+
+    flower.style.setProperty(
+      "--start-x",
+      `${startX}px`
+    );
+
+    flower.style.setProperty(
+      "--start-y",
+      `${startY}px`
+    );
+
+    flower.style.setProperty(
+      "--end-x",
+      `${endX}px`
+    );
+
+    flower.style.setProperty(
+      "--end-y",
+      `${endY}px`
+    );
+
+    flower.style.setProperty(
+      "--rotation",
+      `${Math.random() * 720 - 360}deg`
+    );
+
+    flower.style.setProperty(
+      "--size",
+      `${18 + Math.random() * 15}px`
+    );
+
+    flower.style.animationDelay =
+      `${Math.random() * 0.18}s`;
+
+    document.body.appendChild(
+      flower
+    );
+
+    /*
+     * Clean up each flower after the
+     * animation finishes.
+     */
+    setTimeout(
+      () => {
+        flower.remove();
+      },
+      1600
+    );
+  }
 }
 
 
