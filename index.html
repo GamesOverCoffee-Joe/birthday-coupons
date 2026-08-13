@@ -2640,38 +2640,37 @@ async function confirmRedemption() {
     return;
   }
 
-  const coupon =
-    selectedCoupon;
+  const coupon = selectedCoupon;
 
-  modalConfirm.disabled =
-    true;
-
-  modalCancel.disabled =
-    true;
-
-  modalConfirm.textContent =
-    "Redeeming... 💕";
+  modalConfirm.disabled = true;
+  modalCancel.disabled = true;
+  modalConfirm.textContent = "Redeeming... 💕";
 
   try {
 
-    const result =
-      await postAPI({
-        action: "redeem",
-        couponId: coupon.id
-      });
+    const result = await postAPI({
+      action: "redeem",
+      couponId: coupon.id
+    });
 
     if (!result.success) {
-
       throw new Error(
         result.error ||
         "The coupon could not be redeemed."
       );
     }
 
-    closeRedeemModal();
+    /*
+     * IMPORTANT:
+     *
+     * At this point the backend has confirmed
+     * that the redemption succeeded.
+     *
+     * Do NOT let a failed state refresh make us
+     * tell the user that redemption failed.
+     */
 
-    // Refresh authoritative state.
-    await loadPublicState();
+    closeRedeemModal();
 
     playCelebration();
 
@@ -2679,20 +2678,42 @@ async function confirmRedemption() {
       `Coupon redeemed! ${coupon.emoji}💕`
     );
 
+    /*
+     * Refresh the displayed state separately.
+     *
+     * If this fails, the redemption still succeeded.
+     */
+    try {
+
+      await loadPublicState();
+
+    } catch (refreshError) {
+
+      console.error(
+        "Coupon redeemed successfully, but state refresh failed:",
+        refreshError
+      );
+
+      /*
+       * Keep the successful redemption message.
+       * The next page load will get the authoritative state.
+       */
+    }
+
   } catch (error) {
 
-    console.error(error);
+    console.error(
+      "Coupon redemption failed:",
+      error
+    );
 
     showToast(
       error.message ||
-      "Something went wrong. Your coupon was NOT used."
+      "Something went wrong while redeeming the coupon."
     );
 
-    modalConfirm.disabled =
-      false;
-
-    modalCancel.disabled =
-      false;
+    modalConfirm.disabled = false;
+    modalCancel.disabled = false;
 
     modalConfirm.textContent =
       "Yes! Redeem it 🎉";
@@ -2700,8 +2721,7 @@ async function confirmRedemption() {
     return;
   }
 
-  modalCancel.disabled =
-    false;
+  modalCancel.disabled = false;
 }
 
 
