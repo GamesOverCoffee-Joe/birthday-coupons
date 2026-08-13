@@ -2233,49 +2233,198 @@ function logoutAdmin() {
 
 async function loadPublicState() {
 
-  try {
+  const maxAttempts = 4;
 
-    const response =
-      await fetch(
-        API_URL +
-        "?action=state&_=" +
-        Date.now(),
-        {
-          method: "GET",
-          cache: "no-store"
-        }
+  let lastError = null;
+
+  for (
+    let attempt = 1;
+    attempt <= maxAttempts;
+    attempt++
+  ) {
+
+    try {
+
+      console.log(
+        `Loading coupon state (attempt ${attempt}/${maxAttempts})...`
       );
 
-    if (!response.ok) {
-      throw new Error("Server response was not OK.");
-    }
+      const controller =
+        new AbortController();
 
-    const data =
-      await response.json();
+      const timeout =
+        setTimeout(
+          () => controller.abort(),
+          12000
+        );
 
-    if (!data.success) {
-      throw new Error(
-        data.error ||
-        "Unable to load coupons."
+      const response =
+        await fetch(
+          API_URL +
+          "?action=state&_=" +
+          Date.now(),
+          {
+            method: "GET",
+            cache: "no-store",
+            signal: controller.signal
+          }
+        );
+
+      clearTimeout(timeout);
+
+      if (!response.ok) {
+
+        throw new Error(
+          `Server returned HTTP ${response.status}.`
+        );
+      }
+
+      const data =
+        await response.json();
+
+      if (!data.success) {
+
+        throw new Error(
+          data.error ||
+          "Unable to load coupons."
+        );
+      }
+
+      appState = data;
+
+      renderPublicState();
+
+      hideLoading();
+
+      return;
+
+    } catch (error) {
+
+      console.error(
+        `Coupon load attempt ${attempt} failed:`,
+        error
       );
+
+      lastError = error;
+
+      if (attempt < maxAttempts) {
+
+        // Exponential-ish backoff:
+        // 1 second, 2 seconds, 4 seconds.
+        const delay =
+          1000 * Math.pow(
+            2,
+            attempt - 1
+          );
+
+        showLoadingMessage(
+          attempt,
+          maxAttempts
+        );
+
+        await sleep(delay);
+
+      }
     }
-
-    appState = data;
-
-    renderPublicState();
-
-    hideLoading();
-
-  } catch (error) {
-
-    console.error(error);
-
-    hideLoading();
-
-    showToast(
-      "I couldn't load the coupons right now. Please try again. 💕"
-    );
   }
+
+  // All automatic attempts failed.
+  hideLoading();
+
+  showConnectionError(lastError);
+}
+
+  function sleep(milliseconds) {
+
+  return new Promise(
+    resolve =>
+      setTimeout(
+        resolve,
+        milliseconds
+      )
+  );
+}
+
+
+function showLoadingMessage(
+  attempt,
+  maxAttempts
+) {
+
+  const text =
+    document.querySelector(
+      ".loading-text"
+    );
+
+  if (!text) {
+    return;
+  }
+
+  text.textContent =
+    `Getting your birthday coupons ready... ` +
+    `(${attempt}/${maxAttempts}) 💕`;
+}
+
+
+function showConnectionError(error) {
+
+  console.error(
+    "Unable to connect to coupon backend:",
+    error
+  );
+
+  loading.classList.remove(
+    "hidden"
+  );
+
+  loading.innerHTML = `
+    <div
+      class="loading-heart"
+      aria-hidden="true"
+    >
+      💕
+    </div>
+
+    <div
+      class="loading-text"
+      style="text-align:center;max-width:320px;"
+    >
+      Hmm... the birthday magic is taking
+      a little longer than expected.
+    </div>
+
+    <button
+      id="retryConnectionButton"
+      class="btn btn-primary"
+      type="button"
+      style="margin-top:18px;"
+    >
+      Try again 💕
+    </button>
+  `;
+
+  document
+    .getElementById("retryConnectionButton")
+    .addEventListener(
+      "click",
+      () => {
+
+        loading.innerHTML = `
+          <div
+            class="loading-heart"
+            aria-hidden="true"
+          >
+            💕
+          </div>
+
+          <div class="loading-text">
+            Trying again... 💕
+          </div>
+        `;
+
+        loadPublicState();
+      }
+    );
 }
 
 
