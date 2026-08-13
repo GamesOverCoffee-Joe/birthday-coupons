@@ -803,6 +803,53 @@ button {
   color: #b85e65;
 }
 
+  /* =========================================================
+   REDEMPTION LOADING ANIMATION
+   ========================================================= */
+
+.redeem-loading {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.redeem-spinner {
+  width: 17px;
+  height: 17px;
+
+  border: 3px solid rgba(255,255,255,0.35);
+  border-top-color: white;
+
+  border-radius: 50%;
+
+  animation:
+    redeemSpin 0.8s linear infinite;
+}
+
+.redeem-heart {
+  display: inline-block;
+
+  animation:
+    redeemHeartbeat 0.9s ease-in-out infinite;
+}
+
+@keyframes redeemSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes redeemHeartbeat {
+  0%, 100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.18);
+  }
+}
+
 /* =========================================================
    TOAST
    ========================================================= */
@@ -2642,9 +2689,27 @@ async function confirmRedemption() {
 
   const coupon = selectedCoupon;
 
+  /*
+   * Immediately lock the buttons so the user can't
+   * accidentally submit the same redemption twice.
+   */
   modalConfirm.disabled = true;
   modalCancel.disabled = true;
-  modalConfirm.textContent = "Redeeming... 💕";
+
+  /*
+   * Give immediate visual feedback while the backend
+   * is processing the redemption.
+   *
+   * This is especially useful if Google Apps Script
+   * takes several seconds to respond.
+   */
+  modalConfirm.innerHTML = `
+    <span class="redeem-loading">
+      <span class="redeem-spinner"></span>
+      Redeeming...
+      <span class="redeem-heart">💕</span>
+    </span>
+  `;
 
   try {
 
@@ -2654,6 +2719,7 @@ async function confirmRedemption() {
     });
 
     if (!result.success) {
+
       throw new Error(
         result.error ||
         "The coupon could not be redeemed."
@@ -2663,13 +2729,11 @@ async function confirmRedemption() {
     /*
      * IMPORTANT:
      *
-     * At this point the backend has confirmed
-     * that the redemption succeeded.
+     * The backend has now confirmed that the
+     * redemption succeeded.
      *
-     * Do NOT let a failed state refresh make us
-     * tell the user that redemption failed.
+     * Close the modal and immediately celebrate.
      */
-
     closeRedeemModal();
 
     playCelebration();
@@ -2681,7 +2745,8 @@ async function confirmRedemption() {
     /*
      * Refresh the displayed state separately.
      *
-     * If this fails, the redemption still succeeded.
+     * Even if this refresh takes a while, the user
+     * has already seen the successful redemption.
      */
     try {
 
@@ -2695,8 +2760,9 @@ async function confirmRedemption() {
       );
 
       /*
-       * Keep the successful redemption message.
-       * The next page load will get the authoritative state.
+       * The redemption itself succeeded.
+       * The next page load will retrieve the
+       * authoritative state.
        */
     }
 
@@ -2712,10 +2778,14 @@ async function confirmRedemption() {
       "Something went wrong while redeeming the coupon."
     );
 
+    /*
+     * Allow the user to try again if the actual
+     * redemption request failed.
+     */
     modalConfirm.disabled = false;
     modalCancel.disabled = false;
 
-    modalConfirm.textContent =
+    modalConfirm.innerHTML =
       "Yes! Redeem it 🎉";
 
     return;
